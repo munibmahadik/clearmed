@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import { ResultsCard } from "@/components/results-card"
 import type { ScanResultPayload } from "@/lib/n8n"
 
+const WEBHOOK_RESULT_KEY = "webhook-result-"
+
 type ApiResult = {
   executionId: string
   finished?: boolean
@@ -17,8 +19,8 @@ interface ResultsViewProps {
 }
 
 /**
- * Fetches /api/results?executionId=... (supports webhook wh-xxx and n8n execution IDs)
- * and renders ResultsCard with text + audio_base64 for playback.
+ * Fetches /api/results?executionId=... (supports webhook wh-xxx and n8n execution IDs).
+ * For webhook IDs on Vercel, falls back to sessionStorage when API returns 404 (no shared server cache).
  */
 export function ResultsView({ executionId }: ResultsViewProps) {
   const [data, setData] = useState<ApiResult | null>(null)
@@ -30,8 +32,22 @@ export function ResultsView({ executionId }: ResultsViewProps) {
     setLoading(true)
     setError(null)
     fetch(`/api/results?executionId=${encodeURIComponent(executionId)}`)
-      .then((res) => res.json())
-      .then((json: ApiResult) => {
+      .then(async (res) => {
+        if (cancelled) return
+        if (res.status === 404 && executionId.startsWith("wh-") && typeof window !== "undefined") {
+          const stored = sessionStorage.getItem(WEBHOOK_RESULT_KEY + executionId)
+          if (stored) {
+            try {
+              const result = JSON.parse(stored) as ScanResultPayload
+              sessionStorage.removeItem(WEBHOOK_RESULT_KEY + executionId)
+              setData({ executionId, finished: true, status: "success", result })
+              return
+            } catch {
+              // invalid stored data, fall through to use API error
+            }
+          }
+        }
+        const json = (await res.json()) as ApiResult
         if (cancelled) return
         if (json.error) setError(json.error)
         else setData(json)
