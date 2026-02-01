@@ -1,21 +1,47 @@
 "use client"
 
-import { useRef } from "react"
+import { useState, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { Camera } from "lucide-react"
-import { useMedicalScan } from "@/hooks/useMedicalScan"
 
 export function ScanButton() {
-  const { scan, isScanning, error, clearError } = useMedicalScan()
+  const router = useRouter()
+  const [isScanning, setIsScanning] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const sendImage = async (file: File) => {
+    if (isScanning) return
+    setIsScanning(true)
+    try {
+      const formData = new FormData()
+      formData.append("image", file)
+      const res = await fetch("/api/scan", { method: "POST", body: formData })
+      const text = await res.text()
+      let json: { executionId?: string; error?: string } = {}
+      if (text.trim()) {
+        try {
+          json = JSON.parse(text) as { executionId?: string; error?: string }
+        } catch {
+          throw new Error(res.ok ? "Invalid response from server" : `Scan failed (${res.status})`)
+        }
+      }
+      if (!res.ok) throw new Error(json.error ?? "Scan failed")
+      const executionId = json.executionId ?? "demo"
+      router.push(`/results?executionId=${encodeURIComponent(executionId)}`)
+    } catch {
+      setIsScanning(false)
+    }
+  }
+
   const handleClick = () => {
-    clearError()
     inputRef.current?.click()
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) void scan(file)
+    if (file && file.type.startsWith("image/")) {
+      sendImage(file)
+    }
     e.target.value = ""
   }
 
@@ -29,11 +55,6 @@ export function ScanButton() {
         className="hidden"
         aria-hidden
       />
-      {error && (
-        <p className="mb-2 text-sm text-destructive text-center" role="alert">
-          {error}
-        </p>
-      )}
       <button
         onClick={handleClick}
         disabled={isScanning}
