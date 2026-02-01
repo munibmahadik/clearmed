@@ -44,12 +44,22 @@ export async function triggerViaWebhook(formData: FormData): Promise<TriggerWork
     method: "POST",
     body: formData,
   })
+  const text = await res.text()
   if (!res.ok) {
-    const text = await res.text()
     throw new Error(`n8n webhook failed (${res.status}): ${text}`)
   }
 
-  const raw = (await res.json()) as Record<string, unknown>
+  if (!text || text.trim() === "") {
+    throw new Error("n8n webhook returned empty response. Check Respond to Webhook node config and that Prepare Response outputs valid JSON.")
+  }
+
+  let raw: Record<string, unknown>
+  try {
+    raw = JSON.parse(text) as Record<string, unknown>
+  } catch (e) {
+    const preview = text.length > 200 ? `${text.slice(0, 200)}...` : text
+    throw new Error(`n8n webhook returned invalid JSON (Unexpected end of JSON input). Raw response preview: ${preview}`)
+  }
   const payload = parseWebhookResponse(raw)
 
   const executionId = `${WEBHOOK_EXECUTION_PREFIX}${crypto.randomUUID()}`
@@ -60,7 +70,8 @@ export async function triggerViaWebhook(formData: FormData): Promise<TriggerWork
 }
 
 function parseWebhookResponse(raw: Record<string, unknown>): ScanResultPayload {
-  const obj = raw as RawMedicalOutput
+  // n8n "First Incoming Item" may send item.json at top level or wrapped as { json: { ... } }
+  const obj = (raw.json && typeof raw.json === "object" ? raw.json : raw) as RawMedicalOutput
 
   // App shape { checklist, summary?, audioUrl?, audio_base64? }
   if (obj.checklist && Array.isArray(obj.checklist)) {
@@ -205,8 +216,8 @@ export function parseScanResultFromExecution(exec: GetExecutionResult): ScanResu
   if (!exec.finished || !exec.data?.resultData?.runData) return null
   const runData = exec.data.resultData.runData
 
-  // Prefer "Transform to Patient-Friendly Format" or "Code in JavaScript" over HTTP Request
-  const preferredOrder = ["Transform to Patient-Friendly Format", "Code in JavaScript", "HTTP Request"]
+  // Prefer "Prepare Response" (final payload) or other output nodes
+  const preferredOrder = ["Prepare Response", "Transform to Patient-Friendly Format", "Code in JavaScript", "HTTP Request"]
   let lastOutput: unknown = null
   let lastNodeName: string | null = null
 

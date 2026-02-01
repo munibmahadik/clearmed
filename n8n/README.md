@@ -10,9 +10,11 @@ This folder holds **workflow JSON files** so they live in the same repo as the a
 
 The **Medical Agent Backend** workflow uses a Webhook trigger and works on n8n cloud free trial.
 
-**Flow:** Webhook (POST /scan) → Basic LLM Chain (Gemini, imageBinary) → Code (parse JSON) → ElevenLabs TTS (HTTP Request) → Prepare Response (binary→base64 + checklist) → Respond to Webhook.
+**Flow (medback.json):** Webhook → OpenAI OCR (German notes, ICD-10-GM/OPS) → Code (parse) → **Draft Chain** (patient-friendly checklist + audio script) → Parse Draft. In parallel: **Guardian Chain** (hallucination check) → Parse Guardian → **IF** (pass/fail). On FAIL: **Anonymize** → **Discord** webhook. On PASS: ElevenLabs TTS → **Prepare Response** → Respond to Webhook.
 
-**Setup:** Import `Medical Agent Backend.json`, activate, set `N8N_WEBHOOK_URL` to your webhook URL (e.g. `https://your-instance.app.n8n.cloud/webhook/scan`) in `.env.local`. App sends image as multipart with field `image`. In the **HTTP Request** node, set ElevenLabs API key (Header Auth: `xi-api-key`) and optionally change the voice ID—**Rachel** is `21m00Tcm4TlvDq8ikWAM` (calm American English).
+**Setup:** Import `medback.json`, activate, set `N8N_WEBHOOK_URL` in `.env.local`. Configure: (1) **OpenAI Chat Model**: Add OpenAI credentials (API key) in n8n, select model (e.g. gpt-4o-mini, gpt-4-turbo) in node parameters; (2) **HTTP Request** (ElevenLabs): Header Auth `xi-api-key`, voice ID `21m00Tcm4TlvDq8ikWAM` (Rachel); (3) **Discord Webhook**: replace the placeholder URL with your real webhook.
+
+**Discord 400 "YOUR_WEBHOOK_ID is not snowflake":** The workflow JSON uses placeholders `YOUR_WEBHOOK_ID` and `YOUR_WEBHOOK_TOKEN`. In n8n, open the **Discord Webhook** node and set the **URL** to your real webhook: `https://discord.com/api/webhooks/<ID>/<TOKEN>`. To get it: Discord server → Server Settings → Integrations → Webhooks → New Webhook (or copy from existing) → Copy webhook URL. Paste that full URL into the node; leave authentication as None.
 
 ---
 
@@ -33,7 +35,7 @@ The **Medical Agent Backend** workflow uses a Webhook trigger and works on n8n c
 - `audio_base64?`: string — Base64-encoded MP3 from ElevenLabs; app converts to blob URL for playback
 - `verifiedSafe?`: boolean  
 
-The app also supports **raw medical output** `{ Diagnosis, Medications, Warning Signs }` — it transforms it into the checklist shape automatically. **Respond to Webhook** should return `{ summary, checklist, audio_base64 }` so the PWA can show text and play audio without an S3 bucket.
+The app also supports **raw medical output** `{ Diagnosis, Medications, Warning Signs }` — it transforms it into the checklist shape automatically. **Respond to Webhook** should return `{ summary, checklist, audio_base64, verifiedSafe }` so the PWA can show text, play audio, and display "Verified Safe" or "Needs Review" based on the Guardian check.
 
 ---
 

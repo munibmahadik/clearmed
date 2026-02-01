@@ -69,6 +69,7 @@ export function ResultsView({ executionId }: ResultsViewProps) {
       checklist={result.checklist}
       audioSrc={result.audioUrl}
       audioBase64={result.audio_base64}
+      verifiedSafe={result.verifiedSafe}
     />
   )
 }
