@@ -1,5 +1,5 @@
 /**
- * n8n API client for the ClearMed pipeline.
+ * n8n API client for the ClearMED pipeline.
  * Used to trigger the "process doctor's note" workflow and fetch execution results.
  */
 

@@ -232,7 +232,7 @@ export function AuthGate() {
           <p className="mt-5 text-center text-sm text-muted-foreground leading-relaxed">
             {isSignIn ? (
               <>
-                New to ClearMed?{" "}
+                New to ClearMED?{" "}
                 <button
                   type="button"
                   onClick={() => setMode("signup")}

@@ -170,7 +170,7 @@
         "url": "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"content\": \"ClearMed: Hallucination detected. Review needed.\",\n  \"embeds\": [{\n    \"title\": \"Guardian Check Failed\",\n    \"description\": \"Reason: {{ $json.reason }}\",\n    \"fields\": [\n      {\"name\": \"Diagnosis\", \"value\": \"{{ $json.diagnosis }}\"},\n      {\"name\": \"Medications count\", \"value\": \"{{ $json.medCount }}\"},\n      {\"name\": \"Warnings count\", \"value\": \"{{ $json.warningCount }}\"}\n    ]\n  }]\n}"
+        "jsonBody": "={\n  \"content\": \"ClearMED: Hallucination detected. Review needed.\",\n  \"embeds\": [{\n    \"title\": \"Guardian Check Failed\",\n    \"description\": \"Reason: {{ $json.reason }}\",\n    \"fields\": [\n      {\"name\": \"Diagnosis\", \"value\": \"{{ $json.diagnosis }}\"},\n      {\"name\": \"Medications count\", \"value\": \"{{ $json.medCount }}\"},\n      {\"name\": \"Warnings count\", \"value\": \"{{ $json.warningCount }}\"}\n    ]\n  }]\n}"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,

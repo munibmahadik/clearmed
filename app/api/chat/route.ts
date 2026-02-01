@@ -6,7 +6,7 @@ import {
 } from "@/lib/n8n"
 import { getIcd10GmReference } from "@/lib/icd10gm"
 
-const SYSTEM_PROMPT_BASE = `You are a friendly health assistant for ClearMed. You help users understand their doctor's notes and health information in plain language.
+const SYSTEM_PROMPT_BASE = `You are a friendly health assistant for ClearMED. You help users understand their doctor's notes and health information in plain language.
 
 Rules:
 - Use simple, 6th-grade reading level. Be warm and supportive.

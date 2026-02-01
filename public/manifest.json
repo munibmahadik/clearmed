@@ -1,6 +1,6 @@
 {
-  "name": "ClearMed",
-  "short_name": "ClearMed",
+  "name": "ClearMED",
+  "short_name": "ClearMED",
   "description": "Scan your doctor's notes and get simple, clear explanations instantly.",
   "start_url": "/",
   "display": "standalone",

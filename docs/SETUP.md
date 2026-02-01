@@ -53,7 +53,7 @@ This guide covers creating a GitHub repo for this project and keeping n8n workfl
 The app requires sign-in before using the scan feature.
 
 - **Required:** Set `AUTH_SECRET` in `.env.local`. Generate one with: `openssl rand -base64 32`.
-- **Email/password:** Works out of the box. Users can “Create an account” or “Sign in to Clearmed” with email and password. Accounts are stored in memory (restart clears them); for production, replace the store in `lib/auth-store.ts` with a database.
+- **Email/password:** Works out of the box. Users can “Create an account” or “Sign in to ClearMED” with email and password. Accounts are stored in memory (restart clears them); for production, replace the store in `lib/auth-store.ts` with a database.
 - **Google / Apple (optional):** To enable “Continue with Google” or “Continue with Apple”, add `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and/or `APPLE_ID`, `APPLE_SECRET` to `.env.local`. See [NextAuth providers](https://next-auth.js.org/providers/) for setup.
 
 ---

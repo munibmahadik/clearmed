@@ -47,11 +47,11 @@ export function HomeContent() {
   if (status === "unauthenticated") {
     return (
       <div className="w-full max-w-sm mx-auto flex flex-col items-center">
-        {/* Single combined logo: icon left + ClearMed, a bit larger than header */}
+        {/* Single combined logo: icon left + ClearMED, a bit larger than header */}
         <div className="flex items-center justify-center gap-2.5 mb-4">
           <AppLogo className="w-12 h-12 text-primary shrink-0" />
           <h1 className="text-3xl font-semibold text-foreground tracking-tight">
-            ClearMed
+            ClearMED
           </h1>
         </div>
         <p className="text-muted-foreground text-center text-sm mb-8 max-w-[260px]">

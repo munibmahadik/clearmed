@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ClearMed – Your Doctor's Note, Explained",
+  title: "ClearMED – Your Doctor's Note, Explained",
   description: "Scan your doctor's notes and get a simple, verified audio guide and checklist.",
 };
 

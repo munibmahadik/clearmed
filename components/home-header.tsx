@@ -20,7 +20,7 @@ export function HomeHeader() {
           <circle cx="24" cy="8" r="5" fill="currentColor" />
           <path d="M22 8h4M24 6v4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
-        <span className="text-xl font-semibold text-foreground tracking-tight">ClearMed</span>
+        <span className="text-xl font-semibold text-foreground tracking-tight">ClearMED</span>
       </div>
     </header>
   )
