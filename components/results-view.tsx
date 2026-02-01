@@ -39,7 +39,7 @@ export function ResultsView({ executionId }: ResultsViewProps) {
           if (stored) {
             try {
               const result = JSON.parse(stored) as ScanResultPayload
-              sessionStorage.removeItem(WEBHOOK_RESULT_KEY + executionId)
+              // Keep in sessionStorage so chat page can use report context (Ask about this report)
               setData({ executionId, finished: true, status: "success", result })
               return
             } catch {

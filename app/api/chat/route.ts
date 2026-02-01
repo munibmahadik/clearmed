@@ -36,6 +36,7 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}))
     const message = typeof body.message === "string" ? body.message.trim() : ""
     const executionId = typeof body.executionId === "string" ? body.executionId.trim() || undefined : undefined
+    const reportContext = body.reportContext && typeof body.reportContext === "object" ? (body.reportContext as ScanResultPayload) : undefined
 
     if (!message) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 })
@@ -50,7 +51,13 @@ export async function POST(request: Request) {
     }
 
     let contextBlock = ""
-    if (executionId) {
+    // Prefer client-provided report context (works when server cache is empty, e.g. serverless)
+    if (reportContext) {
+      const formatted = formatScanContext(reportContext)
+      if (formatted) {
+        contextBlock = `\n\nUser's last scan (for context only):\n${formatted}\n`
+      }
+    } else if (executionId) {
       const scan =
         executionId.startsWith("wh-")
           ? getWebhookCachedResult(executionId)

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import type { ScanResultPayload } from "@/lib/n8n"
 
 export type ChatMessage = {
   id: string
@@ -10,6 +11,8 @@ export type ChatMessage = {
 
 const PLACEHOLDER_REPLY =
   "Chat API isn't set up yet. Once you add POST /api/chat, I'll reply here."
+
+const WEBHOOK_RESULT_KEY = "webhook-result-"
 
 export interface ChatViewProps {
   /** When set, chat sends this with every message so the bot can use your report as context */
@@ -21,7 +24,30 @@ export function ChatView({ executionId }: ChatViewProps) {
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [reportContext, setReportContext] = useState<ScanResultPayload | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
+
+  // Load report context when opening chat from results (sessionStorage or API)
+  useEffect(() => {
+    if (!executionId?.trim() || typeof window === "undefined") return
+    const key = WEBHOOK_RESULT_KEY + executionId.trim()
+    const stored = sessionStorage.getItem(key)
+    if (stored) {
+      try {
+        const result = JSON.parse(stored) as ScanResultPayload
+        setReportContext(result)
+        return
+      } catch {
+        // invalid, fall through to fetch
+      }
+    }
+    fetch(`/api/results?executionId=${encodeURIComponent(executionId.trim())}`)
+      .then((res) => res.json())
+      .then((data: { result?: ScanResultPayload }) => {
+        if (data?.result) setReportContext(data.result)
+      })
+      .catch(() => {})
+  }, [executionId])
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" })
@@ -38,8 +64,9 @@ export function ChatView({ executionId }: ChatViewProps) {
     setLoading(true)
 
     try {
-      const body: { message: string; executionId?: string } = { message: text }
+      const body: { message: string; executionId?: string; reportContext?: ScanResultPayload } = { message: text }
       if (executionId?.trim()) body.executionId = executionId.trim()
+      if (reportContext) body.reportContext = reportContext
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -82,7 +109,7 @@ export function ChatView({ executionId }: ChatViewProps) {
       >
         {messages.length === 0 && (
           <div className="text-center text-muted-foreground text-sm py-8">
-            <p>{executionId ? "Ask about your report. I have your checklist and summary." : "Ask anything about your health or your scan."}</p>
+            <p>{executionId ? (reportContext ? "Ask about your report. I have your checklist and summary." : "Loading your report…") : "Ask anything about your health or your scan."}</p>
             <p className="mt-1">This is not medical advice.</p>
           </div>
         )}
@@ -135,7 +162,7 @@ export function ChatView({ executionId }: ChatViewProps) {
             aria-label="Send"
           >
             <svg
-              className="w-5 h-5"
+              className="w-5 h-5 rotate-90"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
