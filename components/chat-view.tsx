@@ -10,7 +10,7 @@ export type ChatMessage = {
 }
 
 const PLACEHOLDER_REPLY =
-  "Chat API isn't set up yet. Once you add POST /api/chat, I'll reply here."
+  "I couldn't connect to the chat service. Check your connection and try again."
 
 const WEBHOOK_RESULT_KEY = "webhook-result-"
 
@@ -71,9 +71,12 @@ export function ChatView({ executionId }: ChatViewProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        credentials: "include",
       })
       const data = (await res.json().catch(() => ({}))) as { reply?: string; error?: string }
-      const replyText = res.ok ? (data.reply ?? PLACEHOLDER_REPLY) : (data.error ?? "Something went wrong.")
+      const replyText = res.ok
+        ? (data.reply ?? PLACEHOLDER_REPLY)
+        : (data.error ?? `Something went wrong (${res.status}). Try again.`)
       const assistantMsg: ChatMessage = {
         id: crypto.randomUUID(),
         role: "assistant",

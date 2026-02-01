@@ -93,13 +93,13 @@ export function ResultsCard({
   }
 
   return (
-    <Card className="w-full max-w-md bg-card border-border shadow-sm rounded-2xl overflow-hidden">
-      <CardContent className="p-6 sm:p-8 space-y-6">
-        {/* Verified Safe / Needs Review Badge */}
-        <div className="flex flex-col items-center py-5">
-          <div className="relative mb-4">
+    <Card className="w-full max-w-md bg-card border border-border shadow-sm rounded-2xl overflow-hidden">
+      <CardContent className="p-6 sm:p-7 space-y-5">
+        {/* Status */}
+        <div className="flex flex-col items-center py-4">
+          <div className="mb-3">
             <svg 
-              className={`w-16 h-16 ${verifiedSafe ? 'text-primary' : 'text-amber-500'}`}
+              className={`w-14 h-14 ${verifiedSafe ? "text-primary" : "text-amber-500"}`}
               viewBox="0 0 80 80" 
               fill="none"
               aria-hidden="true"
@@ -129,23 +129,22 @@ export function ResultsCard({
               )}
             </svg>
           </div>
-          <h2 className={`text-xl font-semibold tracking-tight ${verifiedSafe ? 'text-primary' : 'text-amber-600'}`}>
-            {verifiedSafe ? 'Verified Safe' : 'Needs Review'}
+          <h2 className={`text-lg font-semibold tracking-tight ${verifiedSafe ? "text-primary" : "text-amber-600"}`}>
+            {verifiedSafe ? "Verified Safe" : "Needs Review"}
           </h2>
-          <p className="text-muted-foreground text-sm mt-1">
-            {verifiedSafe ? 'No concerning findings detected' : 'A medical professional has been alerted to review.'}
+          <p className="text-muted-foreground text-sm mt-0.5">
+            {verifiedSafe ? "No concerning findings detected" : "A medical professional has been alerted to review."}
           </p>
         </div>
 
-        <div className="h-px bg-border" />
+        <hr className="border-0 border-t border-border" />
 
-        {/* Audio Player */}
-        <div className="space-y-3">
-          <h3 className="text-base font-semibold text-card-foreground">
-            Listen to Summary
+        {/* Audio */}
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-card-foreground uppercase tracking-wide text-muted-foreground">
+            Listen to summary
           </h3>
-          
-          <div className="bg-muted/60 rounded-xl p-4">
+          <div className="bg-muted/50 rounded-xl p-4">
             {effectiveAudioSrc ? (
               <>
                 <audio
@@ -205,41 +204,43 @@ export function ResultsCard({
             </div>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground py-4">
+              <p className="text-sm text-muted-foreground py-3">
                 Audio summary will appear here once generated.
               </p>
             )}
           </div>
         </div>
 
-        <div className="h-px bg-border" />
+        <hr className="border-0 border-t border-border" />
 
-        {/* Checklist */}
-        <div className="space-y-3">
-          <h3 className="text-base font-semibold text-card-foreground">
-            What You Need to Do
+        {/* From your note – findings and recommendations (not necessarily to-dos) */}
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-card-foreground uppercase tracking-wide text-muted-foreground">
+            From your note
           </h3>
-          
+          <p className="text-xs text-muted-foreground">
+            Findings and recommendations from your doctor&apos;s note.
+          </p>
           <ul className="space-y-2" role="list">
             {checklist.map((item, index) => (
               <li 
                 key={index}
-                className="flex items-start gap-3 p-3.5 bg-muted/40 rounded-xl"
+                className="flex items-start gap-3 py-2.5 px-3 rounded-lg bg-muted/30 border border-transparent"
               >
                 <span 
                   className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 ${
                     item.checked 
-                      ? 'bg-primary/15 text-primary' 
-                      : 'bg-amber-500/15 text-amber-600'
+                      ? "bg-primary/15 text-primary" 
+                      : "bg-amber-500/15 text-amber-600"
                   }`}
                   aria-hidden="true"
                 >
                   {item.checked ? (
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M5 12l5 5L20 7" />
                     </svg>
                   ) : (
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
                       <circle cx="12" cy="12" r="1" fill="currentColor" />
                     </svg>
                   )}

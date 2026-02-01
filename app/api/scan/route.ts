@@ -16,7 +16,13 @@ export const maxDuration = 60
  * Returns: { executionId } so the client can poll /api/results?executionId=...
  */
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions)
+  let session = null
+  try {
+    session = await getServerSession(authOptions)
+  } catch {
+    // JWT decryption can fail if AUTH_SECRET is missing or changed; treat as no session
+    return NextResponse.json({ error: "Sign in to scan" }, { status: 401 })
+  }
   if (!session?.user) {
     return NextResponse.json({ error: "Sign in to scan" }, { status: 401 })
   }

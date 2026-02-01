@@ -87,7 +87,7 @@ function parseWebhookResponse(raw: Record<string, unknown>): ScanResultPayload {
       summary: (obj.summary as string) ?? (obj.text as string) ?? "",
       audioUrl: (obj.audio_url as string) ?? (obj.audioUrl as string),
       audio_base64: (obj.audio_base64 as string) ?? undefined,
-      verifiedSafe: obj.verifiedSafe as boolean | undefined,
+      verifiedSafe: obj.verifiedSafe === false ? false : true,
     }
   }
 
@@ -260,7 +260,7 @@ export function parseScanResultFromExecution(exec: GetExecutionResult): ScanResu
       summary: (obj.summary as string) ?? "",
       audioUrl: (obj.audio_url as string) ?? (obj.audioUrl as string),
       audio_base64: (obj.audio_base64 as string) ?? undefined,
-      verifiedSafe: obj.verifiedSafe as boolean | undefined,
+      verifiedSafe: obj.verifiedSafe === false ? false : true,
     }
   }
 

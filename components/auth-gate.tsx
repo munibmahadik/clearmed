@@ -91,10 +91,10 @@ export function AuthGate() {
 
   return (
     <div className="w-full max-w-sm mx-auto">
-      <Card className="border-border bg-card shadow-md">
-        <CardContent className="p-6 pt-6">
-          <h2 className="text-xl font-semibold text-foreground text-center mb-5">
-            {isSignIn ? "Sign in to Clearmed" : "Create your account"}
+      <Card className="border-border bg-card shadow-sm rounded-2xl overflow-hidden">
+        <CardContent className="p-6">
+          <h2 className="text-lg font-semibold text-foreground text-center mb-5">
+            {isSignIn ? "Sign in" : "Create account"}
           </h2>
 
           {/* OAuth – only show when configured */}
@@ -104,7 +104,7 @@ export function AuthGate() {
                 <button
                   type="button"
                   onClick={() => handleOAuth("google")}
-                  className="w-full flex items-center justify-center gap-3 h-11 rounded-lg border border-border bg-background text-foreground font-medium hover:bg-muted transition-colors"
+                  className="w-full flex items-center justify-center gap-3 h-11 rounded-xl border border-border bg-background text-foreground font-medium hover:bg-muted/80 transition-colors"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden>
                     <path
@@ -131,7 +131,7 @@ export function AuthGate() {
                 <button
                   type="button"
                   onClick={() => handleOAuth("apple")}
-                  className="w-full flex items-center justify-center gap-3 h-11 rounded-lg border border-border bg-background text-foreground font-medium hover:bg-muted transition-colors"
+                  className="w-full flex items-center justify-center gap-3 h-11 rounded-xl border border-border bg-background text-foreground font-medium hover:bg-muted/80 transition-colors"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                     <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
@@ -170,7 +170,7 @@ export function AuthGate() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className={cn(
-                    "w-full h-11 px-3 rounded-lg border border-input bg-background text-foreground",
+                    "w-full h-11 px-3 rounded-xl border border-input bg-background text-foreground",
                     "placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   )}
                   autoComplete="name"
@@ -189,7 +189,7 @@ export function AuthGate() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className={cn(
-                  "w-full h-11 px-3 rounded-lg border border-input bg-background text-foreground",
+                  "w-full h-11 px-3 rounded-xl border border-input bg-background text-foreground",
                   "placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 )}
                 autoComplete="email"
@@ -208,7 +208,7 @@ export function AuthGate() {
                 required
                 minLength={isSignIn ? undefined : 8}
                 className={cn(
-                  "w-full h-11 px-3 rounded-lg border border-input bg-background text-foreground",
+                  "w-full h-11 px-3 rounded-xl border border-input bg-background text-foreground",
                   "placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 )}
                 autoComplete={isSignIn ? "current-password" : "new-password"}
@@ -222,17 +222,17 @@ export function AuthGate() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-11 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors disabled:opacity-70 disabled:pointer-events-none"
+              className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors disabled:opacity-70 disabled:pointer-events-none"
             >
-              {loading ? "Please wait…" : isSignIn ? "Sign in to Clearmed" : "Create account"}
+              {loading ? "Please wait…" : isSignIn ? "Sign in" : "Create account"}
             </button>
           </form>
 
           {/* Toggle sign in / sign up */}
-          <p className="mt-5 text-center text-sm text-muted-foreground">
+          <p className="mt-5 text-center text-sm text-muted-foreground leading-relaxed">
             {isSignIn ? (
               <>
-                New to Clearmed?{" "}
+                New to ClearMed?{" "}
                 <button
                   type="button"
                   onClick={() => setMode("signup")}

@@ -33,7 +33,7 @@ export function useMedicalScan(): UseMedicalScanResult {
       try {
         const formData = new FormData()
         formData.append("image", file)
-        const res = await fetch("/api/scan", { method: "POST", body: formData })
+        const res = await fetch("/api/scan", { method: "POST", body: formData, credentials: "include" })
         const json = (await res.json()) as { executionId?: string; error?: string }
         if (!res.ok) throw new Error(json.error ?? "Scan failed")
         const executionId = json.executionId ?? "demo"
@@ -41,6 +41,7 @@ export function useMedicalScan(): UseMedicalScanResult {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ executionId }),
+          credentials: "include",
         }).catch(() => {})
         router.push(`/results?executionId=${encodeURIComponent(executionId)}`)
         return executionId

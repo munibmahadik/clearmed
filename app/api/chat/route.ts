@@ -11,12 +11,17 @@ const SYSTEM_PROMPT_BASE = `You are a friendly health assistant for ClearMed. Yo
 Rules:
 - Use simple, 6th-grade reading level. Be warm and supportive.
 - Do NOT diagnose, prescribe, or give medical advice. Always say "consult your healthcare provider" for medical decisions.
-- If the user shares scan results (checklist/summary), you may refer to them to explain terms or answer follow-up questions.
+- When the user's message includes their scan/report context, use it to answer. If they ask "what did the doctor say", "what's in the note", "summarize", or similar, give a direct summary from that context—do not ask them to share details.
+- If the user shares scan results (checklist/summary) in the message, refer to them to explain terms or answer follow-up questions.
 - When the user asks about ICD-10 or ICD-10-GM codes (e.g. G43.0, E11, from German doctor's notes), use the ICD-10-GM reference below to explain which category the code belongs to and what it means in plain language.
 - Keep replies concise (a few short paragraphs max).`
 
 function getSystemPrompt(): string {
-  return `${SYSTEM_PROMPT_BASE}\n\n---\n\n${getIcd10GmReference()}`
+  try {
+    return `${SYSTEM_PROMPT_BASE}\n\n---\n\n${getIcd10GmReference()}`
+  } catch {
+    return SYSTEM_PROMPT_BASE
+  }
 }
 
 function formatScanContext(payload: ScanResultPayload): string {
@@ -50,10 +55,13 @@ export async function POST(request: Request) {
 
     const apiKey = process.env.OPENAI_API_KEY
     if (!apiKey) {
-      return NextResponse.json({
-        reply:
-          "Chat is not configured. Add OPENAI_API_KEY to .env.local to enable replies.",
-      })
+      return NextResponse.json(
+        {
+          error:
+            "Chat is not configured. Add OPENAI_API_KEY to your .env.local file and restart the server. Get a key at https://platform.openai.com/api-keys",
+        },
+        { status: 503 }
+      )
     }
 
     let contextBlock = ""
@@ -61,7 +69,7 @@ export async function POST(request: Request) {
     if (reportContext) {
       const formatted = formatScanContext(reportContext)
       if (formatted) {
-        contextBlock = `\n\nUser's last scan (for context only):\n${formatted}\n`
+        contextBlock = `\n\nUser's last scan (use this to answer; do not ask them to share details):\n${formatted}\n\nIf the user asks what the doctor said, what's in the note, or for a summary, answer directly from the scan above.`
       }
     } else if (executionId) {
       const scan =
@@ -71,7 +79,7 @@ export async function POST(request: Request) {
       if (scan) {
         const formatted = formatScanContext(scan)
         if (formatted) {
-          contextBlock = `\n\nUser's last scan (for context only):\n${formatted}\n`
+          contextBlock = `\n\nUser's last scan (use this to answer; do not ask them to share details):\n${formatted}\n\nIf the user asks what the doctor said, what's in the note, or for a summary, answer directly from the scan above.`
         }
       }
     }

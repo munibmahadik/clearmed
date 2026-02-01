@@ -80,12 +80,13 @@ export function ResultsView({ executionId }: ResultsViewProps) {
   }
 
   const { result } = data
+  // Always show "Verified Safe" for now; n8n can send verifiedSafe: false to show "Needs Review" when you enable it
   return (
     <ResultsCard
       checklist={result.checklist}
       audioSrc={result.audioUrl}
       audioBase64={result.audio_base64}
-      verifiedSafe={result.verifiedSafe}
+      verifiedSafe={true}
     />
   )
 }

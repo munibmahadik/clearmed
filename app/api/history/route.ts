@@ -3,8 +3,16 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { addScan, getScans } from "@/lib/history-store"
 
+async function getSessionOrNull() {
+  try {
+    return await getServerSession(authOptions)
+  } catch {
+    return null
+  }
+}
+
 export async function GET() {
-  const session = await getServerSession(authOptions)
+  const session = await getSessionOrNull()
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Sign in to view history" }, { status: 401 })
   }
@@ -13,7 +21,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions)
+  const session = await getSessionOrNull()
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Sign in to record scans" }, { status: 401 })
   }
