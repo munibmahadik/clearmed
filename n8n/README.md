@@ -8,11 +8,19 @@ This folder holds **workflow JSON files** so they live in the same repo as the a
 
 ## Medical Agent Backend (webhook, free trial)
 
-The **Medical Agent Backend** workflow uses a Webhook trigger and works on n8n cloud free trial.
+The **medback** workflow uses a Webhook trigger and works on n8n cloud free trial.
 
-**Flow:** Webhook (POST /scan) → Basic LLM Chain (Gemini, imageBinary) → Code (parse JSON) → ElevenLabs TTS (HTTP Request) → Prepare Response (binary→base64 + checklist) → Respond to Webhook.
+**Flow:** Webhook (POST /dizzy) → Code (extract image) → Basic LLM Chain (Gemini, imageBinary) → **Parse Guardian** (parse JSON) → ElevenLabs TTS (HTTP Request) → Prepare Response (binary→base64 + checklist) → Respond to Webhook.
 
-**Setup:** Import `Medical Agent Backend.json`, activate, set `N8N_WEBHOOK_URL` to your webhook URL (e.g. `https://your-instance.app.n8n.cloud/webhook/scan`) in `.env.local`. App sends image as multipart with field `image`. In the **HTTP Request** node, set ElevenLabs API key (Header Auth: `xi-api-key`) and optionally change the voice ID—**Rachel** is `21m00Tcm4TlvDq8ikWAM` (calm American English).
+**Setup:** Import `medback.json`, activate the workflow, set `N8N_WEBHOOK_URL` to your webhook URL (e.g. `https://your-instance.app.n8n.cloud/webhook/dizzy`) in `.env.local`. App sends image as multipart with field `image`. In the **HTTP Request** node, set ElevenLabs API key (Header Auth: `xi-api-key`) and optionally change the voice ID—**Rachel** is `21m00Tcm4TlvDq8ikWAM` (calm American English).
+
+---
+
+## shubham_workflow.json (Guardian + optional Discord)
+
+Same pipeline as medback plus a **Guardian** (hallucination check) branch and optional **Discord** alert when Guardian fails. Webhook path is **dizzy**.
+
+**Discord (optional):** The workflow only calls Discord when a webhook URL is set. In n8n: open the workflow → **Settings** (gear) → **Static Data** → add key `discordWebhookUrl` with value your full Discord webhook URL (e.g. `https://discord.com/api/webhooks/123456789/your_token`). Get the URL from Discord: Server → Integrations → Webhooks → New Webhook → Copy webhook URL. If you leave it unset, the Discord node is skipped and you won’t get the 400 “webhook_id is not snowflake” error.
 
 ---
 

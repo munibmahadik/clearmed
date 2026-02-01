@@ -13,7 +13,7 @@
         -144
       ],
       "id": "e40cdee6-4d67-4bea-ad1c-aa8a81a9c2bc",
-      "name": "Code in JavaScript"
+      "name": "Parse Guardian"
     },
     {
       "parameters": {
@@ -32,7 +32,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"text\": \"The diagnosis is {{ $json.Diagnosis }}. You have {{ $json.Medications.length }} medications prescribed, including {{ $json.Medications[0].Name }}. Please rest and drink water.\",\n  \"model_id\": \"eleven_monolingual_v1\",\n  \"voice_settings\": {\n    \"stability\": 0.5,\n    \"similarity_boost\": 0.75\n  }\n}",
+        "jsonBody": "={\n  \"text\": \"The diagnosis is {{ $json.Diagnosis || 'See your doctor.' }}. {{ $json.Medications && $json.Medications.length ? 'You have ' + $json.Medications.length + ' medication(s) prescribed.' : 'Follow your care plan.' }} Please rest and drink water.\",\n  \"model_id\": \"eleven_monolingual_v1\",\n  \"voice_settings\": {\n    \"stability\": 0.5,\n    \"similarity_boost\": 0.75\n  }\n}",
         "options": {
           "response": {
             "response": {
@@ -60,7 +60,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Merge medical extraction + ElevenLabs MP3 as base64 for the app\nconst medical = $('Code in JavaScript').first().json;\nif (medical.error) {\n  return { json: { summary: '', checklist: [{ text: 'Extraction failed', checked: false }], audio_base64: null } };\n}\nconst checklist = [];\nif (medical.Diagnosis) checklist.push({ text: `Diagnosis: ${medical.Diagnosis}`, checked: true });\n(medical.Medications || []).forEach(m => {\n  const line = typeof m === 'string' ? m : [m.Name, m.Dosage, m.Frequency].filter(Boolean).join(' ');\n  if (line) checklist.push({ text: `Take: ${line}`, checked: true });\n});\n(medical.Warning_Signs || medical.WarningSigns || medical['Warning Signs'] || []).forEach(w => {\n  if (w) checklist.push({ text: `Watch for: ${w}`, checked: false });\n});\nif (checklist.length === 0) checklist.push({ text: 'No specific action items', checked: false });\nconst summary = medical.Diagnosis || 'See checklist.';\nlet audio_base64 = null;\ntry {\n  const buffer = await this.helpers.getBinaryDataBuffer(0, 'audio');\n  if (buffer) audio_base64 = buffer.toString('base64');\n} catch (e) {}\nreturn { json: { summary, checklist, audio_base64 } };"
+        "jsCode": "// Merge medical extraction + ElevenLabs MP3 as base64 for the app\nlet medical;\ntry {\n  medical = $('Parse Guardian').first().json;\n} catch (e) {\n  const msg = e && typeof e === 'object' && 'message' in e ? String(e.message) : 'Parse step did not run';\n  return { json: { summary: '', checklist: [{ text: msg, checked: false }], audio_base64: null } };\n}\nif (!medical || medical.error) {\n  return { json: { summary: '', checklist: [{ text: (medical && medical.error) ? medical.error : 'Extraction failed', checked: false }], audio_base64: null } };\n}\nconst checklist = [];\nif (medical.Diagnosis) checklist.push({ text: `Diagnosis: ${medical.Diagnosis}`, checked: true });\n(medical.Medications || []).forEach(m => {\n  const line = typeof m === 'string' ? m : [m.Name, m.Dosage, m.Frequency].filter(Boolean).join(' ');\n  if (line) checklist.push({ text: `Take: ${line}`, checked: true });\n});\n(medical.Warning_Signs || medical.WarningSigns || medical['Warning Signs'] || []).forEach(w => {\n  if (w) checklist.push({ text: `Watch for: ${w}`, checked: false });\n});\nif (checklist.length === 0) checklist.push({ text: 'No specific action items', checked: false });\nconst summary = medical.Diagnosis || 'See checklist.';\nlet audio_base64 = null;\ntry {\n  const buffer = await this.helpers.getBinaryDataBuffer(0, 'audio');\n  if (buffer) audio_base64 = buffer.toString('base64');\n} catch (e) {}\nreturn { json: { summary, checklist, audio_base64 } };"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -131,7 +131,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "scan",
+        "path": "dizzy",
         "responseMode": "responseNode",
         "options": {}
       },
@@ -161,7 +161,7 @@
   ],
   "pinData": {},
   "connections": {
-    "Code in JavaScript": {
+    "Parse Guardian": {
       "main": [
         [
           {
@@ -198,7 +198,7 @@
       "main": [
         [
           {
-            "node": "Code in JavaScript",
+            "node": "Parse Guardian",
             "type": "main",
             "index": 0
           }

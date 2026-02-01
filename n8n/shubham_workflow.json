@@ -1,0 +1,521 @@
+{
+  "name": "medback",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 1. Try to find the text in several common n8n AI output paths\nconst rawText = $json.text || \n                $json.response?.generations?.[0]?.[0]?.text || \n                $json.output;\n\nif (!rawText) {\n  throw new Error(\"Could not find medical text in the input. Check the previous node's output.\");\n}\n\n// 2. Clean out Markdown JSON wrappers (```json ... ```)\nconst cleanJson = rawText.replace(/```json/g, \"\").replace(/```/g, \"\").trim();\n\n// 3. Return as a clean JSON object\ntry {\n  return JSON.parse(cleanJson);\n} catch (e) {\n  return { error: \"Failed to parse JSON\", originalText: rawText };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8752,
+        2800
+      ],
+      "id": "21f44ee4-e48b-4594-8a11-66ad57732ba0",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Format raw extraction for Draft (patient-friendly, document-specific only)\nconst raw = $json;\nif (raw.error) return { json: { text: JSON.stringify(raw) } };\nconst prompt = `You are a medical assistant. Convert this raw medical extraction into a patient-friendly checklist. Rules:\n- Use ONLY information from the extraction below. Do NOT add generic advice (e.g. no \"watch for new symptoms\" unless the note says so).\n- Use 6th-grade reading level. Translate symbols like '<' and '>' into plain English (e.g. \"worse when...\", \"better when...\").\n- If you see ICD-10-GM or OPS codes, give a brief plain-language explanation with the code in parentheses.\n- Checklist: one item per diagnosis, one per medication (with dosage/frequency if present), one per warning or aggravating/relieving factor from the note. Be specific, not vague.\n- audio_script: 2-3 short, warm sentences summarizing only what is in the extraction, for text-to-speech.\n\nRaw extraction:\n${JSON.stringify(raw, null, 2)}\n\nReturn ONLY valid JSON (no markdown, no backticks):\n{\"checklist\":[{\"text\":\"string\",\"checked\":true|false}],\"audio_script\":\"string\"}`;\nreturn { json: { text: prompt } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8992,
+        2128
+      ],
+      "id": "3559eee9-f5fe-42b4-a308-4a111f866e54",
+      "name": "Format Draft Prompt"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "={{ $json.text }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        9024,
+        2432
+      ],
+      "id": "93cbdee2-076b-478f-b9b2-af0300bd267f",
+      "name": "Draft Chain"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Parse Draft output to checklist + audio_script\nconst rawText = $json.text || $json.response?.generations?.[0]?.[0]?.text || $json.output || '';\nconst clean = rawText.replace(/```json/g, '').replace(/```/g, '').trim();\nlet draft = { checklist: [], audio_script: '' };\ntry {\n  draft = JSON.parse(clean);\n} catch (e) {\n  draft = { checklist: [{ text: 'Could not parse draft', checked: false }], audio_script: 'Please see the checklist for details.' };\n}\nif (!Array.isArray(draft.checklist)) draft.checklist = [];\nif (!draft.audio_script) draft.audio_script = draft.checklist.map(c => c.text).join('. ') || 'See checklist.';\nreturn { json: draft };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9408,
+        2432
+      ],
+      "id": "5e60af87-8209-4ab0-8a0f-db51276c662b",
+      "name": "Parse Draft"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Format prompt for Guardian (hallucination check)\nconst raw = $('Code in JavaScript').first().json;\nconst draft = $json;\nif (raw.error || !draft.checklist) return { json: { text: 'Skip' } };\nconst prompt = `You are a medical safety auditor. Compare the ORIGINAL extraction with the DRAFT summary. Did the draft hallucinate (add meds, change dosages, add/remove diagnoses)? Return ONLY valid JSON: {\"pass\": true|false, \"reason\": \"brief explanation\"}\n\nORIGINAL:\n${JSON.stringify(raw, null, 2)}\n\nDRAFT:\n${JSON.stringify(draft, null, 2)}`;\nreturn { json: { text: prompt } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9232,
+        3184
+      ],
+      "id": "6cc1085d-a0b8-4656-aed8-070df0ac57c0",
+      "name": "Format Guardian Prompt"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "={{ $json.text }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        8848,
+        3040
+      ],
+      "id": "e40d1227-52e3-4fc0-babb-1f41fcc58e26",
+      "name": "Guardian Chain"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Parse Guardian output for pass/fail\nconst rawText = $json.text || $json.response?.generations?.[0]?.[0]?.text || $json.output || '';\nconst clean = rawText.replace(/```json/g, '').replace(/```/g, '').trim();\nlet result = { pass: true, reason: '' };\ntry {\n  const parsed = JSON.parse(clean);\n  result = { pass: parsed.pass === true, reason: parsed.reason || '' };\n} catch (e) {}\nreturn { json: result };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9520,
+        2912
+      ],
+      "id": "16e2b348-f77f-4e80-ba7b-7ca2fe83bc7e",
+      "name": "Parse Guardian"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "guardian-fail",
+              "leftValue": "={{ $json.pass }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        9808,
+        2656
+      ],
+      "id": "46e95e12-bb7a-4edd-be61-b144698c65ff",
+      "name": "IF Guardian Fail"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Anonymize: strip PII before sending to Discord\nconst draft = $('Parse Draft').first().json;\nconst guardian = $('Parse Guardian').first().json;\nconst raw = $('Code in JavaScript').first().json;\nconst anonymized = {\n  diagnosis: raw.Diagnosis || '(redacted)',\n  medCount: Array.isArray(raw.Medications) ? raw.Medications.length : 0,\n  warningCount: (raw.Warning_Signs || raw.WarningSigns || raw['Warning Signs'] || []).length,\n  guardianFail: guardian.pass === false,\n  reason: guardian.reason || ''\n};\nreturn { json: anonymized };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10032,
+        2784
+      ],
+      "id": "105cc9e7-07a9-4280-b522-b5e1ff4ce3aa",
+      "name": "Anonymize"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discordapp.com/api/webhooks/1467345232000716966/2HrD203rBfFj-JGce0Pp37rjv4_b-QHbOmnSJ08lMeQ9EOswHR0DIi6qVJZVk9ZIn1Rw",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\": \"ClearMed: Hallucination detected. Review needed.\",\n  \"embeds\": [{\n    \"title\": \"Guardian Check Failed\",\n    \"description\": \"Reason: {{ $json.reason }}\",\n    \"fields\": [\n      {\"name\": \"Diagnosis\", \"value\": \"{{ $json.diagnosis }}\"},\n      {\"name\": \"Medications count\", \"value\": \"{{ $json.medCount }}\"},\n      {\"name\": \"Warnings count\", \"value\": \"{{ $json.warningCount }}\"}\n    ]\n  }]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        10176,
+        2496
+      ],
+      "id": "9b1f7fed-7827-44f5-bd6c-51b1ba8f3cb6",
+      "name": "Discord Webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.elevenlabs.io/v1/text-to-speech/Qy4b2JlSGxY7I9M9Bqxb",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"text\": \"{{ $('Parse Draft').first().json.audio_script || 'Please see the checklist for details.' }}\",\n  \"model_id\": \"eleven_monolingual_v1\",\n  \"voice_settings\": {\n    \"stability\": 0.5,\n    \"similarity_boost\": 0.75\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "audio"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        9360,
+        2208
+      ],
+      "id": "fd9a2fe5-c209-44f5-911d-c303e188852f",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "911tbWbL40vBJxUr",
+          "name": "Header Auth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const fallback = { summary: 'See checklist.', checklist: [{ text: 'No items', checked: false }], audio_base64: null, verifiedSafe: false };\ntry {\n  let draft = { checklist: [], audio_script: '' };\n  let guardian = { pass: true, reason: '' };\n  try { draft = $('Parse Draft').first().json || draft; } catch (_) {}\n  try { guardian = $('Parse Guardian').first().json || guardian; } catch (_) {}\n  const checklist = Array.isArray(draft.checklist) ? draft.checklist : [{ text: 'No items', checked: false }];\n  const summary = (draft.checklist && draft.checklist[0] && draft.checklist[0].text) ? draft.checklist[0].text : 'See checklist.';\n  let audio_base64 = null;\n  try {\n    const buffer = await this.helpers.getBinaryDataBuffer(0, 'audio');\n    if (buffer && buffer.length) audio_base64 = buffer.toString('base64');\n  } catch (_) {}\n  const verifiedSafe = guardian.pass === true;\n  return { json: { summary, checklist, audio_base64, verifiedSafe } };\n} catch (e) {\n  return { json: { ...fallback, summary: 'Processing error' } };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9664,
+        2288
+      ],
+      "id": "cd19d000-fec5-41a8-b86a-acb0e49b767f",
+      "name": "Prepare Response"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        9856,
+        2496
+      ],
+      "id": "d59197d5-f20d-4533-89f5-33c11f4bdb7d",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Look at the attached medical document (German doctor's note). OCR the text with 100% accuracy. Extract the following into a JSON format:\n\nDiagnosis (include ICD-10-GM codes if present, e.g. G43.0; preserve codes exactly)\n\nMedications (Name, Dosage, Frequency)\n\nWarning Signs (include OPS or other procedure codes if present)\n\nReturn ONLY raw JSON. No conversational filler. Do not include patient name, address, or other identifiers.",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "HumanMessagePromptTemplate",
+              "messageType": "imageBinary"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        8624,
+        2448
+      ],
+      "id": "5259e651-1446-4e70-a487-93d37773ece0",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4.1-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        8336,
+        2896
+      ],
+      "id": "4ceba82a-fb21-4ac0-9299-7a0b8c38e11d",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "2RuK6P6pyKjQnhXO",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dizzy",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        8224,
+        2448
+      ],
+      "id": "11990302-2865-4da0-93f2-a3d9fba8ce07",
+      "name": "Webhook1",
+      "webhookId": "d3dbeb53-9065-4122-97f0-bdbc34668a63"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the image from webhook form data\nconst imageFile = $input.item.binary.image || $input.item.binary.data;\n\nif (!imageFile) {\n  throw new Error('No image found in webhook data');\n}\n\n// Pass through the binary data\nreturn {\n  json: {},\n  binary: {\n    data: imageFile\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8432,
+        2448
+      ],
+      "id": "378deb44-f98e-42a1-a7e9-bbf328a6e853",
+      "name": "Code in JavaScript1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Format Draft Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Draft Prompt": {
+      "main": [
+        [
+          {
+            "node": "Draft Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft Chain": {
+      "main": [
+        [
+          {
+            "node": "Parse Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Draft": {
+      "main": [
+        [
+          {
+            "node": "Format Guardian Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Guardian Prompt": {
+      "main": [
+        [
+          {
+            "node": "Guardian Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardian Chain": {
+      "main": [
+        [
+          {
+            "node": "Parse Guardian",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Guardian Fail": {
+      "main": [
+        [
+          {
+            "node": "Anonymize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anonymize": {
+      "main": [
+        [
+          {
+            "node": "Discord Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Prepare Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Guardian": {
+      "main": [
+        [
+          {
+            "node": "IF Guardian Fail",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Draft Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Guardian Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "ea4e4cb9-4895-414c-be44-c9d2fbfaae07",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "307ae928639dd5af7370c1726e366f8a41f406a4e12fc37968ce195554674113"
+  },
+  "id": "meB2jd3Qo_DmgNrTa-tDP",
+  "tags": []
+}
