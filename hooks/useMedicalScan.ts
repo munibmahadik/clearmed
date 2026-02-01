@@ -37,6 +37,11 @@ export function useMedicalScan(): UseMedicalScanResult {
         const json = (await res.json()) as { executionId?: string; error?: string }
         if (!res.ok) throw new Error(json.error ?? "Scan failed")
         const executionId = json.executionId ?? "demo"
+        fetch("/api/history", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ executionId }),
+        }).catch(() => {})
         router.push(`/results?executionId=${encodeURIComponent(executionId)}`)
         return executionId
       } catch (e) {

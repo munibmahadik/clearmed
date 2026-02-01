@@ -1,0 +1,27 @@
+{"location":"home-content.tsx:useSession","message":"session status after load","data":{"status":"unauthenticated"},"timestamp":1769942960059,"sessionId":"debug-session","hypothesisId":"H","runId":"post-fix"}
+{"location":"auth-gate.tsx:handleCredentialsSignIn","message":"signin submit start","data":{"hasEmail":true,"hasPassword":true},"timestamp":1769942975309,"sessionId":"debug-session","hypothesisId":"D"}
+{"location":"auth-gate.tsx:before signIn","message":"getProviders result","data":{"providerKeys":["credentials"],"hasCredentials":true},"timestamp":1769942975377,"sessionId":"debug-session","hypothesisId":"A"}
+{"location":"auth-gate.tsx:after signIn","message":"signIn result","data":{"ok":false,"error":"CredentialsSignin","hasUrl":false},"timestamp":1769942975458,"sessionId":"debug-session","hypothesisId":"A,B"}
+{"location":"lib/auth.ts:authorize","message":"authorize called","data":{"keys":["email","password","redirect","callbackUrl","csrfToken","json"],"hasEmail":true,"hasPassword":true},"timestamp":1769942975454,"sessionId":"debug-session","hypothesisId":"C"}
+{"location":"lib/auth-store.ts:verifyCredentials","message":"verifyCredentials called","data":{"emailLen":24,"storeSize":0},"timestamp":1769942975455,"sessionId":"debug-session","hypothesisId":"E"}
+{"location":"lib/auth.ts:authorize","message":"authorize result","data":{"hasUser":false},"timestamp":1769942975456,"sessionId":"debug-session","hypothesisId":"C,E"}
+{"location":"auth-gate.tsx:after register","message":"calling signIn credentials","data":{"hasEmail":true},"timestamp":1769942979833,"sessionId":"debug-session","hypothesisId":"D"}
+{"location":"lib/auth.ts:authorize","message":"authorize called","data":{"keys":["email","password","redirect","callbackUrl","csrfToken","json"],"hasEmail":true,"hasPassword":true},"timestamp":1769942979923,"sessionId":"debug-session","hypothesisId":"C"}
+{"location":"lib/auth-store.ts:verifyCredentials","message":"verifyCredentials called","data":{"emailLen":24,"storeSize":1},"timestamp":1769942979924,"sessionId":"debug-session","hypothesisId":"E"}
+{"location":"lib/auth-store.ts:verifyCredentials","message":"verifyCredentials result","data":{"found":true,"valid":true},"timestamp":1769942980260,"sessionId":"debug-session","hypothesisId":"E"}
+{"location":"lib/auth.ts:authorize","message":"authorize result","data":{"hasUser":true},"timestamp":1769942980261,"sessionId":"debug-session","hypothesisId":"C,E"}
+{"location":"auth-gate.tsx:after signIn post-register","message":"signIn result","data":{"ok":true,"error":null,"hasUrl":true},"timestamp":1769942980314,"sessionId":"debug-session","hypothesisId":"A,B"}
+{"location":"home-content.tsx:useSession","message":"session status after load","data":{"status":"authenticated"},"timestamp":1769942980330,"sessionId":"debug-session","hypothesisId":"H","runId":"post-fix"}
+{"location":"home-content.tsx:useSession","message":"session status after load","data":{"status":"authenticated"},"timestamp":1769942980498,"sessionId":"debug-session","hypothesisId":"H","runId":"post-fix"}
+{"location":"home-content.tsx:useSession","message":"session status after load","data":{"status":"authenticated"},"timestamp":1769942995030,"sessionId":"debug-session","hypothesisId":"H","runId":"post-fix"}
+{"location":"home-content.tsx:useSession","message":"session status after load","data":{"status":"unauthenticated"},"timestamp":1769942997391,"sessionId":"debug-session","hypothesisId":"H","runId":"post-fix"}
+{"location":"auth-gate.tsx:handleCredentialsSignIn","message":"signin submit start","data":{"hasEmail":true,"hasPassword":true},"timestamp":1769943012194,"sessionId":"debug-session","hypothesisId":"D"}
+{"location":"auth-gate.tsx:before signIn","message":"getProviders result","data":{"providerKeys":["credentials"],"hasCredentials":true},"timestamp":1769943012320,"sessionId":"debug-session","hypothesisId":"A"}
+{"location":"lib/auth.ts:authorize","message":"authorize called","data":{"keys":["email","password","redirect","callbackUrl","csrfToken","json"],"hasEmail":true,"hasPassword":true},"timestamp":1769943012412,"sessionId":"debug-session","hypothesisId":"C"}
+{"location":"lib/auth-store.ts:verifyCredentials","message":"verifyCredentials called","data":{"emailLen":24,"storeSize":1},"timestamp":1769943012413,"sessionId":"debug-session","hypothesisId":"E"}
+{"location":"lib/auth-store.ts:verifyCredentials","message":"verifyCredentials result","data":{"found":true,"valid":true},"timestamp":1769943012718,"sessionId":"debug-session","hypothesisId":"E"}
+{"location":"lib/auth.ts:authorize","message":"authorize result","data":{"hasUser":true},"timestamp":1769943012718,"sessionId":"debug-session","hypothesisId":"C,E"}
+{"location":"auth-gate.tsx:after signIn","message":"signIn result","data":{"ok":true,"error":null,"hasUrl":true},"timestamp":1769943012767,"sessionId":"debug-session","hypothesisId":"A,B"}
+{"location":"home-content.tsx:useSession","message":"session status after load","data":{"status":"authenticated"},"timestamp":1769943012774,"sessionId":"debug-session","hypothesisId":"H","runId":"post-fix"}
+{"location":"home-content.tsx:useSession","message":"session status after load","data":{"status":"authenticated"},"timestamp":1769943012911,"sessionId":"debug-session","hypothesisId":"H","runId":"post-fix"}
+{"location":"home-content.tsx:useSession","message":"session status after load","data":{"status":"unauthenticated"},"timestamp":1769943016654,"sessionId":"debug-session","hypothesisId":"H","runId":"post-fix"}

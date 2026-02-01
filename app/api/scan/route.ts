@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { triggerWorkflow, triggerViaWebhook } from "@/lib/n8n"
 
 const DEMO_EXECUTION_ID = "demo"
@@ -8,12 +10,16 @@ export const maxDuration = 60
 
 /**
  * POST /api/scan
- * Triggers the n8n "process doctor's note" workflow.
+ * Requires authentication. Triggers the n8n "process doctor's note" workflow.
  * Uses N8N_WEBHOOK_URL if set (works on free trial); otherwise uses workflow-run API (paid plan).
- * Body: { image?: string (base64), text?: string } — adjust to match your workflow input.
+ * Body: multipart/form-data with image, or JSON with image/text.
  * Returns: { executionId } so the client can poll /api/results?executionId=...
  */
 export async function POST(request: Request) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return NextResponse.json({ error: "Sign in to scan" }, { status: 401 })
+  }
   try {
     const contentType = request.headers.get("content-type") ?? ""
 
