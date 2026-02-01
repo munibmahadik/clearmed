@@ -10,9 +10,9 @@ This folder holds **workflow JSON files** so they live in the same repo as the a
 
 The **Medical Agent Backend** workflow uses a Webhook trigger and works on n8n cloud free trial.
 
-**Flow:** Webhook (POST /scan) → Basic LLM Chain (Gemini, imageBinary) → Code (parse JSON) → ElevenLabs TTS → Respond to Webhook
+**Flow:** Webhook (POST /scan) → Basic LLM Chain (Gemini, imageBinary) → Code (parse JSON) → ElevenLabs TTS (HTTP Request) → Prepare Response (binary→base64 + checklist) → Respond to Webhook.
 
-**Setup:** Import `Medical Agent Backend.json`, activate, set `N8N_WEBHOOK_URL=https://axlegeek.app.n8n.cloud/webhook/scan` in `.env.local`. App sends image as multipart with field `image`.
+**Setup:** Import `Medical Agent Backend.json`, activate, set `N8N_WEBHOOK_URL` to your webhook URL (e.g. `https://your-instance.app.n8n.cloud/webhook/scan`) in `.env.local`. App sends image as multipart with field `image`. In the **HTTP Request** node, set ElevenLabs API key (Header Auth: `xi-api-key`) and optionally change the voice ID—**Rachel** is `21m00Tcm4TlvDq8ikWAM` (calm American English).
 
 ---
 
@@ -28,19 +28,12 @@ The **Medical Agent Backend** workflow uses a Webhook trigger and works on n8n c
 **Workflow output shape** the app expects (see `lib/n8n.ts` → `ScanResultPayload`):
 
 - `checklist`: `{ text: string, checked: boolean }[]`
-- `summary?`: string  
-- `audioUrl?`: string  
+- `summary?`: string (or `text`)
+- `audioUrl?`: string (optional; if no hosting)
+- `audio_base64?`: string — Base64-encoded MP3 from ElevenLabs; app converts to blob URL for playback
 - `verifiedSafe?`: boolean  
 
-The app also supports **raw medical output** `{ Diagnosis, Medications, Warning Signs }` — it transforms it into the checklist shape automatically.
-
-### Current workflow (workflow.json) — recommended tweaks
-
-1. **Trigger input** — Add field `image` (String, required) in the Execute Workflow Trigger schema.
-2. **Image → LLM** — If Basic LLM Chain expects `imageBinary`, add a Code node after the trigger to convert base64 from `$json.image`/`$json.data.image` to binary.
-3. **ElevenLabs body** — Use `$json.summary` (or the summary text) for `text`, not `JSON.stringify($json)`.
-4. **Transform (optional)** — Add a Code node between "Code in JavaScript" and "HTTP Request" that outputs `{ checklist, summary, verifiedSafe }` for finer control.
-5. **Audio URL** — The HTTP Request returns binary; for `audioUrl` you’d need to upload to S3/Cloudinary and return the URL.
+The app also supports **raw medical output** `{ Diagnosis, Medications, Warning Signs }` — it transforms it into the checklist shape automatically. **Respond to Webhook** should return `{ summary, checklist, audio_base64 }` so the PWA can show text and play audio without an S3 bucket.
 
 ---
 

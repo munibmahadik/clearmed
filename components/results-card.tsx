@@ -1,9 +1,8 @@
 "use client"
 
-import React from "react"
-
-import { useState, useRef } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
+import { base64ToBlobUrl } from "@/lib/utils"
 
 interface ChecklistItem {
   text: string
@@ -12,7 +11,10 @@ interface ChecklistItem {
 
 interface ResultsCardProps {
   checklist?: ChecklistItem[]
+  /** URL for audio (e.g. static file or blob URL) */
   audioSrc?: string
+  /** Base64-encoded MP3 from backend; converted to blob URL for playback */
+  audioBase64?: string
 }
 
 const defaultChecklist: ChecklistItem[] = [
@@ -24,12 +26,27 @@ const defaultChecklist: ChecklistItem[] = [
 
 export function ResultsCard({ 
   checklist = defaultChecklist,
-  audioSrc = "/audio-summary.mp3"
+  audioSrc,
+  audioBase64,
 }: ResultsCardProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
   const [duration, setDuration] = useState(0)
+  const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
+
+  // Convert base64 to playable blob URL (iOS/mobile-friendly)
+  useEffect(() => {
+    if (!audioBase64) {
+      setBlobUrl(null)
+      return
+    }
+    const url = base64ToBlobUrl(audioBase64, "audio/mpeg")
+    setBlobUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [audioBase64])
+
+  const effectiveAudioSrc = blobUrl ?? audioSrc ?? undefined
 
   const togglePlay = () => {
     if (audioRef.current) {
@@ -122,11 +139,13 @@ export function ResultsCard({
           <div className="bg-secondary/50 rounded-xl p-4">
             <audio
               ref={audioRef}
-              src={audioSrc}
+              src={effectiveAudioSrc}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
               onEnded={() => setIsPlaying(false)}
               preload="metadata"
+              playsInline
+              className="sr-only"
             />
             
             <div className="flex items-center gap-4">

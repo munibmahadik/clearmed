@@ -62,15 +62,16 @@ export async function triggerViaWebhook(formData: FormData): Promise<TriggerWork
 function parseWebhookResponse(raw: Record<string, unknown>): ScanResultPayload {
   const obj = raw as RawMedicalOutput
 
-  // App shape { checklist: { text, checked }[], summary?, audioUrl? }
+  // App shape { checklist, summary?, audioUrl?, audio_base64? }
   if (obj.checklist && Array.isArray(obj.checklist)) {
     const checklist = obj.checklist.map((c) =>
       typeof c === "string" ? { text: c, checked: true } : { text: (c as { text?: string }).text ?? String(c), checked: (c as { checked?: boolean }).checked ?? true }
     )
     return {
       checklist,
-      summary: (obj.summary as string) ?? "",
+      summary: (obj.summary as string) ?? (obj.text as string) ?? "",
       audioUrl: (obj.audio_url as string) ?? (obj.audioUrl as string),
+      audio_base64: (obj.audio_base64 as string) ?? undefined,
       verifiedSafe: obj.verifiedSafe as boolean | undefined,
     }
   }
@@ -152,6 +153,8 @@ export type ScanResultPayload = {
   checklist?: { text: string; checked: boolean }[]
   summary?: string
   audioUrl?: string
+  /** Base64-encoded MP3 from n8n (ElevenLabs); use base64ToBlobUrl() for playback */
+  audio_base64?: string
   verifiedSafe?: boolean
 }
 

@@ -1,39 +1,21 @@
 "use client"
 
-import { useState, useRef } from "react"
-import { useRouter } from "next/navigation"
+import { useRef } from "react"
 import { Camera } from "lucide-react"
+import { useMedicalScan } from "@/hooks/useMedicalScan"
 
 export function ScanButton() {
-  const router = useRouter()
-  const [isScanning, setIsScanning] = useState(false)
+  const { scan, isScanning, error, clearError } = useMedicalScan()
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const sendImage = async (file: File) => {
-    if (isScanning) return
-    setIsScanning(true)
-    try {
-      const formData = new FormData()
-      formData.append("image", file)
-      const res = await fetch("/api/scan", { method: "POST", body: formData })
-      const json = (await res.json()) as { executionId?: string; error?: string }
-      if (!res.ok) throw new Error(json.error ?? "Scan failed")
-      const executionId = json.executionId ?? "demo"
-      router.push(`/results?executionId=${encodeURIComponent(executionId)}`)
-    } catch {
-      setIsScanning(false)
-    }
-  }
-
   const handleClick = () => {
+    clearError()
     inputRef.current?.click()
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file && file.type.startsWith("image/")) {
-      sendImage(file)
-    }
+    if (file) void scan(file)
     e.target.value = ""
   }
 
@@ -47,6 +29,11 @@ export function ScanButton() {
         className="hidden"
         aria-hidden
       />
+      {error && (
+        <p className="mb-2 text-sm text-destructive text-center" role="alert">
+          {error}
+        </p>
+      )}
       <button
         onClick={handleClick}
         disabled={isScanning}
