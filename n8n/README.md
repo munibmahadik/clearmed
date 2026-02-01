@@ -10,9 +10,11 @@ This folder holds **workflow JSON files** so they live in the same repo as the a
 
 The **Medical Agent Backend** workflow uses a Webhook trigger and works on n8n cloud free trial.
 
-**Flow:** Webhook (POST /scan) → Basic LLM Chain (Gemini, imageBinary) → Code (parse JSON) → ElevenLabs TTS → Respond to Webhook
+**Flow (medback.json):** Webhook → OpenAI OCR (German notes, ICD-10-GM/OPS) → Code (parse) → **Draft Chain** (patient-friendly checklist + audio script) → Parse Draft. In parallel: **Guardian Chain** (hallucination check) → Parse Guardian → **IF** (pass/fail). On FAIL: **Anonymize** → **Discord** webhook. On PASS: ElevenLabs TTS → **Prepare Response** → Respond to Webhook.
 
-**Setup:** Import `Medical Agent Backend.json`, activate, set `N8N_WEBHOOK_URL=https://axlegeek.app.n8n.cloud/webhook/scan` in `.env.local`. App sends image as multipart with field `image`.
+**Setup:** Import `medback.json`, activate, set `N8N_WEBHOOK_URL` in `.env.local`. Configure: (1) **OpenAI Chat Model**: Add OpenAI credentials (API key) in n8n, select model (e.g. gpt-4o-mini, gpt-4-turbo) in node parameters; (2) **HTTP Request** (ElevenLabs): Header Auth `xi-api-key`, voice ID `21m00Tcm4TlvDq8ikWAM` (Rachel); (3) **Discord Webhook**: replace the placeholder URL with your real webhook.
+
+**Discord 400 "YOUR_WEBHOOK_ID is not snowflake":** The workflow JSON uses placeholders `YOUR_WEBHOOK_ID` and `YOUR_WEBHOOK_TOKEN`. In n8n, open the **Discord Webhook** node and set the **URL** to your real webhook: `https://discord.com/api/webhooks/<ID>/<TOKEN>`. To get it: Discord server → Server Settings → Integrations → Webhooks → New Webhook (or copy from existing) → Copy webhook URL. Paste that full URL into the node; leave authentication as None.
 
 ---
 
@@ -28,19 +30,12 @@ The **Medical Agent Backend** workflow uses a Webhook trigger and works on n8n c
 **Workflow output shape** the app expects (see `lib/n8n.ts` → `ScanResultPayload`):
 
 - `checklist`: `{ text: string, checked: boolean }[]`
-- `summary?`: string  
-- `audioUrl?`: string  
+- `summary?`: string (or `text`)
+- `audioUrl?`: string (optional; if no hosting)
+- `audio_base64?`: string — Base64-encoded MP3 from ElevenLabs; app converts to blob URL for playback
 - `verifiedSafe?`: boolean  
 
-The app also supports **raw medical output** `{ Diagnosis, Medications, Warning Signs }` — it transforms it into the checklist shape automatically.
-
-### Current workflow (workflow.json) — recommended tweaks
-
-1. **Trigger input** — Add field `image` (String, required) in the Execute Workflow Trigger schema.
-2. **Image → LLM** — If Basic LLM Chain expects `imageBinary`, add a Code node after the trigger to convert base64 from `$json.image`/`$json.data.image` to binary.
-3. **ElevenLabs body** — Use `$json.summary` (or the summary text) for `text`, not `JSON.stringify($json)`.
-4. **Transform (optional)** — Add a Code node between "Code in JavaScript" and "HTTP Request" that outputs `{ checklist, summary, verifiedSafe }` for finer control.
-5. **Audio URL** — The HTTP Request returns binary; for `audioUrl` you’d need to upload to S3/Cloudinary and return the URL.
+The app also supports **raw medical output** `{ Diagnosis, Medications, Warning Signs }` — it transforms it into the checklist shape automatically. **Respond to Webhook** should return `{ summary, checklist, audio_base64, verifiedSafe }` so the PWA can show text, play audio, and display "Verified Safe" or "Needs Review" based on the Guardian check.
 
 ---
 
@@ -56,6 +51,32 @@ The app also supports **raw medical output** `{ Diagnosis, Medications, Warning 
    Add, commit, and push so the workflow is in the GitHub repo with the rest of the project.
 
 **Import on your side:** In your n8n instance: **⋮** → **Import from File** → choose the JSON from this folder.
+
+---
+
+## Troubleshooting: "Empty response from server"
+
+If the app shows **"Empty response from server"** or **"The scan service returned no data"**, the webhook is being called but n8n is not returning JSON. Common causes:
+
+1. **Workflow errors before Respond to Webhook**  
+   The response is only sent when the **Respond to Webhook** node runs. If any node before it fails, the workflow errors and the caller may get an empty or timeout response.
+
+   **Check:** In n8n, open **Executions** and run a test from the app. Look for failed executions and which node failed:
+   - **Code in JavaScript1** – "No image found" → ensure the app sends multipart with field name `image`.
+   - **Basic LLM Chain (Gemini)** – API key, rate limit, or image too large; ensure Gemini credentials are set in n8n cloud.
+   - **Code in JavaScript** – "Could not find medical text" → LLM output shape changed; adjust the code to read from the correct path.
+   - **HTTP Request (ElevenLabs)** – 4xx/5xx or timeout → check ElevenLabs API key in n8n (Header Auth) and that the voice ID is valid. If ElevenLabs fails, the workflow errors and Respond to Webhook never runs.
+
+2. **Webhook timeout**  
+   If the workflow takes too long (LLM + ElevenLabs), n8n or the caller may timeout before **Respond to Webhook** runs. Consider shortening the chain or using a faster voice/model.
+
+3. **Respond to Webhook config**  
+   Ensure **Respond to Webhook** has:
+   - **Respond With:** JSON  
+   - **Response Body:** `={{ $json }}` (so it sends the output of **Prepare Response**, which is `{ summary, checklist, audio_base64 }`).
+
+4. **Vercel vs local**  
+   From Vercel, the request goes: **Vercel serverless → n8n webhook**. The workflow runs on n8n’s servers. If it works locally but not on Vercel, the workflow itself is the same; check n8n execution logs for runs triggered from the deployed app (same webhook URL, so executions will appear in n8n).
 
 ---
 

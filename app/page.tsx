@@ -5,10 +5,10 @@ export default function HomePage() {
   return (
     <main className="min-h-svh flex flex-col bg-background">
       {/* Header */}
-      <header className="pt-12 pb-4 px-6 text-center">
-        <div className="flex items-center justify-center gap-2 mb-1">
+      <header className="pt-14 pb-6 px-6">
+        <div className="flex items-center justify-center gap-2">
           <svg
-            className="w-8 h-8 text-primary"
+            className="w-9 h-9 text-primary"
             viewBox="0 0 32 32"
             fill="none"
             aria-hidden="true"
@@ -18,16 +18,15 @@ export default function HomePage() {
             <circle cx="24" cy="8" r="5" fill="currentColor" />
             <path d="M22 8h4M24 6v4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
-          <span className="text-lg font-semibold text-foreground tracking-tight">ClearMed</span>
+          <span className="text-xl font-semibold text-foreground tracking-tight">ClearMed</span>
         </div>
       </header>
 
       {/* Main content: auth gate or scan (client component) */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-24">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-28">
         <HomeContent />
       </div>
 
-      {/* Bottom navbar */}
       <Navbar />
     </main>
   )

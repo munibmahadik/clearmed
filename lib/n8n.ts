@@ -15,17 +15,6 @@ const getApiKey = () => {
   return key
 }
 
-/** Parse response body as JSON; avoids "Unexpected end of JSON input" when body is empty or invalid. */
-async function parseJsonResponse<T>(res: Response): Promise<T> {
-  const text = await res.text()
-  if (!text.trim()) throw new Error("Empty response from server")
-  try {
-    return JSON.parse(text) as T
-  } catch {
-    throw new Error(`Invalid JSON response: ${text.slice(0, 80)}...`)
-  }
-}
-
 export type TriggerWorkflowOptions = {
   workflowId: string
   /** Payload to send to the workflow (e.g. image base64, text). */
@@ -55,12 +44,26 @@ export async function triggerViaWebhook(formData: FormData): Promise<TriggerWork
     method: "POST",
     body: formData,
   })
+  const text = await res.text()
   if (!res.ok) {
-    const text = await res.text()
+
     throw new Error(`n8n webhook failed (${res.status}): ${text}`)
   }
 
-  const raw = await parseJsonResponse<Record<string, unknown>>(res)
+  if (!text || text.trim() === "") {
+    throw new Error("n8n webhook returned empty response. Check Respond to Webhook node config and that Prepare Response outputs valid JSON.")
+
+  }
+
+  let raw: Record<string, unknown>
+  try {
+    raw = JSON.parse(text) as Record<string, unknown>
+
+  } catch (e) {
+    const preview = text.length > 200 ? `${text.slice(0, 200)}...` : text
+    throw new Error(`n8n webhook returned invalid JSON (Unexpected end of JSON input). Raw response preview: ${preview}`)
+
+  }
   const payload = parseWebhookResponse(raw)
 
   const executionId = `${WEBHOOK_EXECUTION_PREFIX}${crypto.randomUUID()}`
@@ -71,17 +74,19 @@ export async function triggerViaWebhook(formData: FormData): Promise<TriggerWork
 }
 
 function parseWebhookResponse(raw: Record<string, unknown>): ScanResultPayload {
-  const obj = raw as RawMedicalOutput
+  // n8n "First Incoming Item" may send item.json at top level or wrapped as { json: { ... } }
+  const obj = (raw.json && typeof raw.json === "object" ? raw.json : raw) as RawMedicalOutput
 
-  // App shape { checklist: { text, checked }[], summary?, audioUrl? }
+  // App shape { checklist, summary?, audioUrl?, audio_base64? }
   if (obj.checklist && Array.isArray(obj.checklist)) {
     const checklist = obj.checklist.map((c) =>
       typeof c === "string" ? { text: c, checked: true } : { text: (c as { text?: string }).text ?? String(c), checked: (c as { checked?: boolean }).checked ?? true }
     )
     return {
       checklist,
-      summary: (obj.summary as string) ?? "",
+      summary: (obj.summary as string) ?? (obj.text as string) ?? "",
       audioUrl: (obj.audio_url as string) ?? (obj.audioUrl as string),
+      audio_base64: (obj.audio_base64 as string) ?? undefined,
       verifiedSafe: obj.verifiedSafe as boolean | undefined,
     }
   }
@@ -120,7 +125,7 @@ export async function triggerWorkflow({
     const text = await res.text()
     throw new Error(`n8n trigger failed (${res.status}): ${text}`)
   }
-  const json = await parseJsonResponse<{ data?: { executionId?: string; id?: string }; executionId?: string; id?: string }>(res)
+  const json = (await res.json()) as { data?: { executionId?: string; id?: string }; executionId?: string; id?: string }
   const executionId = json.data?.executionId ?? json.data?.id ?? json.executionId ?? json.id
   if (!executionId) throw new Error("n8n response missing execution ID")
   return {
@@ -129,24 +134,11 @@ export async function triggerWorkflow({
   }
 }
 
-/** n8n node execution run data structure */
-type NodeRunData = {
-  data?: {
-    main?: Array<
-      Array<{
-        json?: Record<string, unknown>
-        [key: string]: unknown
-      }>
-    >
-  }
-  [key: string]: unknown
-}
-
 export type GetExecutionResult = {
   id: string
   finished: boolean
   status: string
-  data?: { resultData?: { runData?: Record<string, NodeRunData[]> } }
+  data?: { resultData?: { runData?: Record<string, unknown[]> } }
 }
 
 /**
@@ -168,7 +160,7 @@ export async function getExecution(
     const text = await res.text()
     throw new Error(`n8n getExecution failed (${res.status}): ${text}`)
   }
-  return parseJsonResponse<GetExecutionResult>(res)
+  return res.json() as Promise<GetExecutionResult>
 }
 
 /** Shape we expect from the "process doctor's note" workflow output (last node). */
@@ -176,6 +168,8 @@ export type ScanResultPayload = {
   checklist?: { text: string; checked: boolean }[]
   summary?: string
   audioUrl?: string
+  /** Base64-encoded MP3 from n8n (ElevenLabs); use base64ToBlobUrl() for playback */
+  audio_base64?: string
   verifiedSafe?: boolean
 }
 
@@ -226,15 +220,17 @@ export function parseScanResultFromExecution(exec: GetExecutionResult): ScanResu
   if (!exec.finished || !exec.data?.resultData?.runData) return null
   const runData = exec.data.resultData.runData
 
-  // Prefer "Transform to Patient-Friendly Format" or "Code in JavaScript" over HTTP Request
-  const preferredOrder = ["Transform to Patient-Friendly Format", "Code in JavaScript", "HTTP Request"]
+  // Prefer "Prepare Response" (final payload) or other output nodes
+  const preferredOrder = ["Prepare Response", "Prepare Response1", "Transform to Patient-Friendly Format", "Code in JavaScript", "HTTP Request"]
   let lastOutput: unknown = null
   let lastNodeName: string | null = null
 
+  type RunItem = { data?: { main?: Array<Array<{ json?: unknown }>> } }
   for (const name of preferredOrder) {
-    const runs = runData[name]
-    if (runs?.[0]?.data?.main?.[0]?.[0]?.json) {
-      lastOutput = runs[0].data.main[0][0].json
+    const runs = runData[name] as RunItem[] | undefined
+    const item = runs?.[0]
+    if (item?.data?.main?.[0]?.[0]?.json) {
+      lastOutput = item.data.main[0][0].json
       lastNodeName = name
       break
     }
@@ -242,18 +238,30 @@ export function parseScanResultFromExecution(exec: GetExecutionResult): ScanResu
   if (!lastOutput && lastNodeName === null) {
     const lastKey = Object.keys(runData).pop()
     if (lastKey) {
-      const lastRuns = runData[lastKey]
-      lastOutput = lastRuns?.[0]?.data?.main?.[0]?.[0]?.json ?? lastRuns?.[0]?.data?.main?.[0]?.[0]
+      const lastRuns = runData[lastKey] as RunItem[] | undefined
+      const lastItem = lastRuns?.[0]
+      lastOutput = lastItem?.data?.main?.[0]?.[0]?.json ?? lastItem?.data?.main?.[0]?.[0]
       lastNodeName = lastKey
     }
   }
 
   if (!lastOutput || typeof lastOutput !== "object") return null
 
-  const obj = lastOutput as Record<string, unknown>
+  const rawObj = lastOutput as Record<string, unknown>
+  // Unwrap if n8n returned full item { json: {...} }
+  const obj = (rawObj.json && typeof rawObj.json === "object" ? rawObj.json : rawObj) as Record<string, unknown>
 
   if (obj.checklist && Array.isArray(obj.checklist)) {
-    return obj as ScanResultPayload
+    const checklist = (obj.checklist as unknown[]).map((c) =>
+      typeof c === "string" ? { text: c, checked: true } : { text: (c as { text?: string }).text ?? String(c), checked: (c as { checked?: boolean }).checked ?? true }
+    )
+    return {
+      checklist,
+      summary: (obj.summary as string) ?? "",
+      audioUrl: (obj.audio_url as string) ?? (obj.audioUrl as string),
+      audio_base64: (obj.audio_base64 as string) ?? undefined,
+      verifiedSafe: obj.verifiedSafe as boolean | undefined,
+    }
   }
 
   const raw = obj as RawMedicalOutput
@@ -283,10 +291,14 @@ const demoScanResult: ScanResultPayload = {
 export async function getScanResult(executionId: string | null): Promise<ScanResultPayload | null> {
   if (!executionId) return null
   if (executionId === DEMO_EXECUTION_ID) return demoScanResult
+  if (executionId.startsWith(WEBHOOK_EXECUTION_PREFIX)) {
+    return getWebhookCachedResult(executionId)
+  }
   try {
     const exec = await getExecution(executionId, { includeData: true })
     return parseScanResultFromExecution(exec)
-  } catch {
+  } catch (e) {
+    console.error("[getScanResult]", e)
     return null
   }
 }

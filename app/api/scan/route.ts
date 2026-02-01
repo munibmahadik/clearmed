@@ -5,6 +5,9 @@ import { triggerWorkflow, triggerViaWebhook } from "@/lib/n8n"
 
 const DEMO_EXECUTION_ID = "demo"
 
+// Allow longer run for n8n webhook (Vercel default is 10s; Pro can use 60)
+export const maxDuration = 60
+
 /**
  * POST /api/scan
  * Requires authentication. Triggers the n8n "process doctor's note" workflow.
@@ -21,11 +24,12 @@ export async function POST(request: Request) {
     const contentType = request.headers.get("content-type") ?? ""
 
     // Webhook (Medical Agent Backend) - expects multipart with image, works on free trial
+    // Return result in response so client can store it (Vercel serverless has no shared in-memory cache)
     if (process.env.N8N_WEBHOOK_URL) {
       if (contentType.includes("multipart/form-data")) {
         const formData = await request.formData()
-        const { executionId } = await triggerViaWebhook(formData)
-        return NextResponse.json({ executionId })
+        const { executionId, data: result } = await triggerViaWebhook(formData)
+        return NextResponse.json({ executionId, result })
       }
       return NextResponse.json({ error: "Webhook expects multipart/form-data with image" }, { status: 400 })
     }
