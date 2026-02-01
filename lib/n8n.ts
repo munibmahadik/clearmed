@@ -118,11 +118,24 @@ export async function triggerWorkflow({
   }
 }
 
+/** n8n node execution run data structure */
+type NodeRunData = {
+  data?: {
+    main?: Array<
+      Array<{
+        json?: Record<string, unknown>
+        [key: string]: unknown
+      }>
+    >
+  }
+  [key: string]: unknown
+}
+
 export type GetExecutionResult = {
   id: string
   finished: boolean
   status: string
-  data?: { resultData?: { runData?: Record<string, unknown[]> } }
+  data?: { resultData?: { runData?: Record<string, NodeRunData[]> } }
 }
 
 /**
