@@ -217,14 +217,16 @@ export function parseScanResultFromExecution(exec: GetExecutionResult): ScanResu
   const runData = exec.data.resultData.runData
 
   // Prefer "Prepare Response" (final payload) or other output nodes
-  const preferredOrder = ["Prepare Response", "Transform to Patient-Friendly Format", "Code in JavaScript", "HTTP Request"]
+  const preferredOrder = ["Prepare Response", "Prepare Response1", "Transform to Patient-Friendly Format", "Code in JavaScript", "HTTP Request"]
   let lastOutput: unknown = null
   let lastNodeName: string | null = null
 
+  type RunItem = { data?: { main?: Array<Array<{ json?: unknown }>> } }
   for (const name of preferredOrder) {
-    const runs = runData[name]
-    if (runs?.[0]?.data?.main?.[0]?.[0]?.json) {
-      lastOutput = runs[0].data.main[0][0].json
+    const runs = runData[name] as RunItem[] | undefined
+    const item = runs?.[0]
+    if (item?.data?.main?.[0]?.[0]?.json) {
+      lastOutput = item.data.main[0][0].json
       lastNodeName = name
       break
     }
@@ -232,18 +234,30 @@ export function parseScanResultFromExecution(exec: GetExecutionResult): ScanResu
   if (!lastOutput && lastNodeName === null) {
     const lastKey = Object.keys(runData).pop()
     if (lastKey) {
-      const lastRuns = runData[lastKey]
-      lastOutput = lastRuns?.[0]?.data?.main?.[0]?.[0]?.json ?? lastRuns?.[0]?.data?.main?.[0]?.[0]
+      const lastRuns = runData[lastKey] as RunItem[] | undefined
+      const lastItem = lastRuns?.[0]
+      lastOutput = lastItem?.data?.main?.[0]?.[0]?.json ?? lastItem?.data?.main?.[0]?.[0]
       lastNodeName = lastKey
     }
   }
 
   if (!lastOutput || typeof lastOutput !== "object") return null
 
-  const obj = lastOutput as Record<string, unknown>
+  const rawObj = lastOutput as Record<string, unknown>
+  // Unwrap if n8n returned full item { json: {...} }
+  const obj = (rawObj.json && typeof rawObj.json === "object" ? rawObj.json : rawObj) as Record<string, unknown>
 
   if (obj.checklist && Array.isArray(obj.checklist)) {
-    return obj as ScanResultPayload
+    const checklist = (obj.checklist as unknown[]).map((c) =>
+      typeof c === "string" ? { text: c, checked: true } : { text: (c as { text?: string }).text ?? String(c), checked: (c as { checked?: boolean }).checked ?? true }
+    )
+    return {
+      checklist,
+      summary: (obj.summary as string) ?? "",
+      audioUrl: (obj.audio_url as string) ?? (obj.audioUrl as string),
+      audio_base64: (obj.audio_base64 as string) ?? undefined,
+      verifiedSafe: obj.verifiedSafe as boolean | undefined,
+    }
   }
 
   const raw = obj as RawMedicalOutput
@@ -273,10 +287,14 @@ const demoScanResult: ScanResultPayload = {
 export async function getScanResult(executionId: string | null): Promise<ScanResultPayload | null> {
   if (!executionId) return null
   if (executionId === DEMO_EXECUTION_ID) return demoScanResult
+  if (executionId.startsWith(WEBHOOK_EXECUTION_PREFIX)) {
+    return getWebhookCachedResult(executionId)
+  }
   try {
     const exec = await getExecution(executionId, { includeData: true })
     return parseScanResultFromExecution(exec)
-  } catch {
+  } catch (e) {
+    console.error("[getScanResult]", e)
     return null
   }
 }
