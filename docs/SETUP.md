@@ -48,13 +48,23 @@ This guide covers creating a GitHub repo for this project and keeping n8n workfl
 
 ---
 
-## 2. n8n in the pipeline
+## 2. Auth (sign-in before scanning)
+
+The app requires sign-in before using the scan feature.
+
+- **Required:** Set `AUTH_SECRET` in `.env.local`. Generate one with: `openssl rand -base64 32`.
+- **Email/password:** Works out of the box. Users can “Create an account” or “Sign in to Clearmed” with email and password. Accounts are stored in memory (restart clears them); for production, replace the store in `lib/auth-store.ts` with a database.
+- **Google / Apple (optional):** To enable “Continue with Google” or “Continue with Apple”, add `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and/or `APPLE_ID`, `APPLE_SECRET` to `.env.local`. See [NextAuth providers](https://next-auth.js.org/providers/) for setup.
+
+---
+
+## 3. n8n in the pipeline
 
 The app pipeline is **Scan → n8n workflow → Results**. The app calls n8n to run the “process doctor’s note” workflow and shows its output on the results page.
 
 - **Store workflow JSONs** in the [`n8n/`](../n8n/) folder (see [n8n/README.md](../n8n/README.md)). Your friend exports from n8n (Editor → ⋮ → Download); you add those JSONs into `n8n/` and commit.
 - **Configure n8n:** Set `N8N_BASE_URL`, `N8N_API_KEY`, and `N8N_WORKFLOW_ID_SCAN` in `.env.local` so the scan API triggers the workflow and the results page shows real data. Without them, the app uses demo data.
 
-After you push the repo and configure n8n (and add workflow JSONs to `n8n/`), you’ll have:
+After you push the repo, set `AUTH_SECRET`, configure n8n (and add workflow JSONs to `n8n/`), you’ll have:
 - This project on GitHub.
 - The app calling n8n for every scan, with workflows versioned in the same repo.
