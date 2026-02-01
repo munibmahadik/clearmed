@@ -20,33 +20,32 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
-  --radius: 0.5rem;
+  --radius: 0.75rem;
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #020817;
+  --background: #fafafa;
+  --foreground: #0f172a;
   --card: #ffffff;
-  --card-foreground: #020817;
+  --card-foreground: #0f172a;
   --popover: #ffffff;
-  --popover-foreground: #020817;
+  --popover-foreground: #0f172a;
   
-  /* ✅ CHANGED TO GREEN */
-  --primary: #16a34a; 
+  --primary: #059669;
   --primary-foreground: #ffffff;
   
   --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --muted: #f1f5f9;
+  --secondary-foreground: #334155;
+  --muted: #f8fafc;
   --muted-foreground: #64748b;
-  --accent: #f0fdf4;
-  --accent-foreground: #16a34a;
-  --destructive: #ef4444;
-  --destructive-foreground: #f8fafc;
+  --accent: #ecfdf5;
+  --accent-foreground: #059669;
+  --destructive: #dc2626;
+  --destructive-foreground: #fafafa;
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --ring: #16a34a;
-  --radius: 0.5rem;
+  --ring: #059669;
+  --radius: 0.75rem;
 }
 
 .dark {

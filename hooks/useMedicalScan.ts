@@ -22,8 +22,10 @@ export function useMedicalScan(): UseMedicalScanResult {
 
   const scan = useCallback(
     async (file: File): Promise<string | null> => {
-      if (!file.type.startsWith("image/")) {
-        setError("Please choose an image file.")
+      const isImage = file.type.startsWith("image/")
+      const isPdf = file.type === "application/pdf"
+      if (!isImage && !isPdf) {
+        setError("Please choose an image or PDF file.")
         return null
       }
       setIsScanning(true)
