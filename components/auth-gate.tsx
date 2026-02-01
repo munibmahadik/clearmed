@@ -19,7 +19,7 @@ export function AuthGate() {
   const [oauth, setOauth] = useState<OAuthProviders>({ google: false, apple: false })
 
   useEffect(() => {
-    fetch("/api/auth/providers")
+    fetch("/api/auth/oauth-enabled")
       .then((res) => res.json())
       .then((data: OAuthProviders) => setOauth(data))
       .catch(() => {})
@@ -39,6 +39,7 @@ export function AuthGate() {
         email: email.trim(),
         password,
         redirect: false,
+        callbackUrl: "/",
       })
       if (res?.error) {
         setError("Invalid email or password.")
@@ -77,6 +78,7 @@ export function AuthGate() {
         email: email.trim(),
         password,
         redirect: false,
+        callbackUrl: "/",
       })
       if (signInRes?.ok) window.location.href = "/"
       else setError("Account created. Please sign in.")

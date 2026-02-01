@@ -39,6 +39,11 @@ export function ScanButton() {
           // sessionStorage full or unavailable
         }
       }
+      fetch("/api/history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ executionId }),
+      }).catch(() => {})
       router.push(`/results?executionId=${encodeURIComponent(executionId)}`)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed. Try again.")

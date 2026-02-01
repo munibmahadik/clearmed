@@ -28,14 +28,17 @@ export const authOptions: NextAuthOptions = {
         ]
       : []),
     CredentialsProvider({
-      name: "Sign in to Clearmed",
+      id: "credentials",
+      name: "Clearmed",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
-        const user = await verifyCredentials(credentials.email, credentials.password)
+        const email = String(credentials.email).trim().toLowerCase()
+        const password = String(credentials.password)
+        const user = await verifyCredentials(email, password)
         if (!user) return null
         return {
           id: user.email,
@@ -46,8 +49,7 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
-  // Don't set pages.signIn so GET /api/auth/signin returns 200 with CSRF token.
-  // Our sign-in form lives on / (HomeContent + AuthGate); credentials POST works when client can GET signin first.
+  pages: { signIn: "/" },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {

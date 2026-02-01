@@ -30,14 +30,16 @@ export function Navbar() {
           <MessageCircle className="w-6 h-6" strokeWidth={1.5} />
           <span className="text-xs font-medium">Chat</span>
         </Link>
-        <Link
-          href="/history"
-          className={`flex flex-col items-center gap-1 transition-colors ${isActive("/history") ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
-          aria-label="History"
-        >
-          <History className="w-6 h-6" strokeWidth={1.5} />
-          <span className="text-xs font-medium">History</span>
-        </Link>
+        {isSignedIn && (
+          <Link
+            href="/history"
+            className={`flex flex-col items-center gap-1 transition-colors ${isActive("/history") ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+            aria-label="History"
+          >
+            <History className="w-6 h-6" strokeWidth={1.5} />
+            <span className="text-xs font-medium">History</span>
+          </Link>
+        )}
         {isSignedIn && (
           <button
             type="button"
