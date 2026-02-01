@@ -4,14 +4,20 @@ import {
   getScanResult,
   type ScanResultPayload,
 } from "@/lib/n8n"
+import { getIcd10GmReference } from "@/lib/icd10gm"
 
-const SYSTEM_PROMPT = `You are a friendly health assistant for ClearMed. You help users understand their doctor's notes and health information in plain language.
+const SYSTEM_PROMPT_BASE = `You are a friendly health assistant for ClearMed. You help users understand their doctor's notes and health information in plain language.
 
 Rules:
 - Use simple, 6th-grade reading level. Be warm and supportive.
 - Do NOT diagnose, prescribe, or give medical advice. Always say "consult your healthcare provider" for medical decisions.
 - If the user shares scan results (checklist/summary), you may refer to them to explain terms or answer follow-up questions.
+- When the user asks about ICD-10 or ICD-10-GM codes (e.g. G43.0, E11, from German doctor's notes), use the ICD-10-GM reference below to explain which category the code belongs to and what it means in plain language.
 - Keep replies concise (a few short paragraphs max).`
+
+function getSystemPrompt(): string {
+  return `${SYSTEM_PROMPT_BASE}\n\n---\n\n${getIcd10GmReference()}`
+}
 
 function formatScanContext(payload: ScanResultPayload): string {
   const parts: string[] = []
@@ -83,7 +89,7 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: getSystemPrompt() },
           { role: "user", content: userContent },
         ],
         max_tokens: 512,
